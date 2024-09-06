@@ -57,7 +57,7 @@ try:
         print(f'Received packet: {packet}')
         packet = wrap_in_dns(packet)
         if packet:
-            print(packet.show(dump=True))
+            print(packet.summary())
 except KeyboardInterrupt:
     print("Shutting down TUN interface.")
 finally:
