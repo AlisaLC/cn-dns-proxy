@@ -39,11 +39,10 @@ def wrap_in_dns(packet):
         an=DNSRR(rrname="sharif.edu", rdata="192.0.2.1"),  # DNS Answer
     )
     
+    # Add the EDNS OPT record with the raw TCP packet as RData
     opt_record = DNSRROPT(
         rrname='.',
         rclass=4096,  # Requestor's UDP payload size (e.g., 4096 bytes)
-        extrcode=0,
-        ttl=0,
         options=[('Unknown-OPT', packet)]  # Unknown OPT record with TCP packet as RData
     )
 
