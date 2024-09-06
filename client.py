@@ -27,8 +27,8 @@ def wrap_in_dns(packet):
     if ip_layer.proto != 6:
         return
     opt_record = DNSRROPT(
-        rclass=4096,  # UDP payload size
-        rdlen=len(packet) + 4,  # Length of the option data plus option header
+        rclass=4096,
+        rdlen=len(packet) + 4,
         rdata=[EDNS0TLV(optcode=65001, optlen=len(packet), optdata=packet)]
     )
     dns_packet = DNS(
@@ -38,16 +38,27 @@ def wrap_in_dns(packet):
         qd=DNSQR(qname="sharif.edu", qtype="A", qclass="IN"),
         ar=opt_record,
     )
-
     return dns_packet
+
+def send_dns_packet(dns_packet):
+    raw_dns_packet = bytes(dns_packet)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        DNS_SERVER = os.getenv('REMOTE_SERVER_IP')
+        DNS_PORT = os.getenv('LOCAL_SERVER_PORT')
+        sock.sendto(raw_dns_packet, (DNS_SERVER, DNS_PORT))
+        print(f"Sent DNS packet to {DNS_SERVER}:{DNS_PORT}")
+    except Exception as e:
+        print(f"Failed to send DNS packet: {e}")
+    finally:
+        sock.close()
     
 try:
     while True:
         packet = os.read(tun, 1500)
-        print(f'Received packet: {packet}')
         packet = wrap_in_dns(packet)
         if packet:
-            print(packet.summary())
+            send_dns_packet(packet)
 except KeyboardInterrupt:
     print("Shutting down TUN interface.")
 finally:
