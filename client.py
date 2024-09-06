@@ -7,7 +7,7 @@ from utils import extract_from_dns, init_tun, wrap_in_dns
 load_dotenv()
 
 REMOTE_IP = os.getenv('REMOTE_SERVER_IP')
-REMOTE_PORT = int(os.getenv('LOCAL_SERVER_PORT'))
+REMOTE_PORT = int(os.getenv('REMOTE_SERVER_PORT'))
 
 tun = init_tun()
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
