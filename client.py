@@ -45,7 +45,7 @@ def send_dns_packet(dns_packet):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         DNS_SERVER = os.getenv('REMOTE_SERVER_IP')
-        DNS_PORT = os.getenv('LOCAL_SERVER_PORT')
+        DNS_PORT = int(os.getenv('LOCAL_SERVER_PORT'))
         sock.sendto(raw_dns_packet, (DNS_SERVER, DNS_PORT))
         print(f"Sent DNS packet to {DNS_SERVER}:{DNS_PORT}")
     except Exception as e:
