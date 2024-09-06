@@ -31,7 +31,7 @@ def wrap_in_dns(packet):
 
 
 def extract_from_dns(packet):
-    dns_response = DNS(data)
+    dns_response = DNS(packet)
     tcp_packet = b""
     for ar in dns_response.ar:
         if not isinstance(ar, DNSRROPT):
