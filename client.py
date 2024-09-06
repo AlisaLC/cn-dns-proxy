@@ -24,7 +24,8 @@ print(f"TUN interface '{TUN_NAME}' is up and running.")
 
 def parse_packet(packet):
     ip_layer = IP(packet)
-    print(f"IP Packet: {ip_layer.src} -> {ip_layer.dst}, Protocol: {ip_layer.proto}")
+    protocol_name = IP_PROTOS.get(ip_layer.proto, 'Unknown')
+    print(f"IP Packet: {ip_layer.src} -> {ip_layer.dst}, Protocol: {protocol_name}")
     if ip_layer.proto == 6:
         tcp_layer = ip_layer[TCP]
         print(f"TCP Packet: Src Port: {tcp_layer.sport}, Dst Port: {tcp_layer.dport}")
@@ -32,7 +33,7 @@ def parse_packet(packet):
         udp_layer = ip_layer[UDP]
         print(f"UDP Packet: Src Port: {udp_layer.sport}, Dst Port: {udp_layer.dport}")
     else:
-        print(f"Other IP protocol: {ip_layer.proto}")
+        print(f"Other IP protocol: {protocol_name}")
 
 try:
     while True:
