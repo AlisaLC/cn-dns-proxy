@@ -1,3 +1,4 @@
+import threading
 import os
 import fcntl
 import struct
@@ -22,6 +23,7 @@ subprocess.run(['ip', 'link', 'set', 'dev', TUN_NAME, 'up'])
 
 print(f"TUN interface '{TUN_NAME}' is up and running.")
 
+
 def wrap_in_dns(packet):
     ip_layer = IP(packet)
     if ip_layer.proto != 6:
@@ -40,6 +42,7 @@ def wrap_in_dns(packet):
     )
     return dns_packet
 
+
 def send_dns_packet(dns_packet):
     raw_dns_packet = bytes(dns_packet)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -52,7 +55,36 @@ def send_dns_packet(dns_packet):
         print(f"Failed to send DNS packet: {e}")
     finally:
         sock.close()
-    
+
+
+def receive_dns_responses():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    LOCAL_PORT = int(os.getenv('LOCAL_CLIENT_PORT'))
+    sock.bind(('0.0.0.0', LOCAL_PORT))
+    try:
+        while True:
+            data, addr = sock.recvfrom(1500)
+            print(f"Received DNS response from {addr}")
+            dns_response = DNS(data)
+            if DNSRROPT in dns_response:
+                opt_record = dns_response[DNSRROPT]
+                tcp_packet_data = opt_record.rdata
+                print(f"Extracted TCP packet (hex): {tcp_packet_data.hex()}")
+                tcp_packet = IP(tcp_packet_data)
+                if TCP in tcp_packet:
+                    print(f"Extracted TCP Packet: {tcp_packet.src}:{tcp_packet[TCP].sport} -> {tcp_packet.dst}:{tcp_packet[TCP].dport}")
+            else:
+                print("No EDNS options found in the DNS response")
+    except KeyboardInterrupt:
+        print("Stopping DNS response listener")
+    finally:
+        sock.close()
+
+
+receiver_thread = threading.Thread(target=receive_dns_responses)
+receiver_thread.daemon = True
+receiver_thread.start()
+
 try:
     while True:
         packet = os.read(tun, 1500)
