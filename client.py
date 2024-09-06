@@ -1,6 +1,6 @@
 import threading
 import os
-from scapy.all import *
+import socket
 from dotenv import load_dotenv
 
 from utils import extract_from_dns, init_tun, wrap_in_dns
