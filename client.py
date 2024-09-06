@@ -13,7 +13,7 @@ tun = os.open('/dev/net/tun', os.O_RDWR)
 
 TUN_NAME = os.getenv('TUN_NAME')
 
-ifr = struct.pack('16sH', TUN_NAME, IFF_TUN | IFF_NO_PI)
+ifr = struct.pack('16sH', TUN_NAME.encode('utf-8'), IFF_TUN | IFF_NO_PI)
 fcntl.ioctl(tun, TUNSETIFF, ifr)
 
 subprocess.run(['ip', 'addr', 'add', os.getenv('SUBNET'), 'dev', TUN_NAME])
