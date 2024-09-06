@@ -22,29 +22,43 @@ subprocess.run(['ip', 'link', 'set', 'dev', TUN_NAME, 'up'])
 
 print(f"TUN interface '{TUN_NAME}' is up and running.")
 
-def parse_packet(packet):
+def wrap_in_dns(packet):
     ip_layer = IP(packet)
     if ip_layer.proto != 6:
         return
-    tcp_layer = ip_layer[TCP]
-    seq_num = tcp_layer.seq
-    ack_num = tcp_layer.ack
-    payload_size = len(tcp_layer.payload)
-    tcp_flags = tcp_layer.flags
-    mss_option = [opt[1] for opt in tcp_layer.options if opt[0] == 'MSS']
-    mss_value = mss_option[0] if mss_option else 'Not Set'
-    print(f"TCP Packet: {ip_layer.src}:{tcp_layer.sport} -> {ip_layer.dst}:{tcp_layer.dport}")
-    print(f"  Sequence Number: {seq_num}")
-    print(f"  Acknowledgment Number: {ack_num}")
-    print(f"  Payload Size: {payload_size} bytes")
-    print(f"  MSS: {mss_value}")
-    print(f"  Flags: {tcp_flags}")
+    dns_packet = DNS(
+        id=0xAAAA,  # Random transaction ID
+        qr=1,  # This is a response
+        opcode=0,  # Standard query
+        aa=1,  # Authoritative answer
+        rd=1,  # Recursion desired
+        ra=1,  # Recursion available
+        z=0,
+        rcode=0,  # No error
+        qd=DNSQR(qname="sharif.edu", qtype="A", qclass="IN"),  # A simple DNS query
+        an=DNSRR(rrname="sharif.edu", rdata="192.0.2.1"),  # DNS Answer
+    )
+    
+    opt_record = DNSRROPT(
+        rrname='.',
+        rclass=4096,  # Requestor's UDP payload size (e.g., 4096 bytes)
+        extrcode=0,
+        ttl=0,
+        options=[('Unknown-OPT', packet)]  # Unknown OPT record with TCP packet as RData
+    )
+
+    # Add the OPT record to the DNS packet
+    dns_packet.ar = opt_record
+
+    return dns_packet
     
 try:
     while True:
         packet = os.read(tun, 1500)
         print(f'Received packet: {packet}')
-        parse_packet(packet)
+        packet = wrap_in_dns(packet)
+        if packet:
+            print(packet.show(dump=True))
 except KeyboardInterrupt:
     print("Shutting down TUN interface.")
 finally:
