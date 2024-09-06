@@ -8,9 +8,18 @@ import subprocess
 logging.basicConfig(level=logging.INFO)
 
 
+def log_tcp_packet(tcp_packet):
+    """Log details of the TCP packet."""
+    logging.info(f"TCP Packet Details: Src IP: {tcp_packet.src}, Dst IP: {tcp_packet.dst}, "
+                 f"Src Port: {tcp_packet[TCP].sport}, Dst Port: {tcp_packet[TCP].dport}, "
+                 f"Seq: {tcp_packet[TCP].seq}, Ack: {tcp_packet[TCP].ack}, "
+                 f"Flags: {tcp_packet.sprintf('%TCP.flags%')}, "
+                 f"Payload Size: {len(tcp_packet[TCP].payload)} bytes")
+
+
 def wrap_in_dns(packet):
     logging.info("Wrapping packet into DNS")
-    
+
     try:
         ip_layer = IP(packet)
         if ip_layer.proto != 6:
@@ -18,9 +27,10 @@ def wrap_in_dns(packet):
             return
 
         tcp = ip_layer[TCP]
+        log_tcp_packet(ip_layer)
+
         if 'S' in tcp.flags:
             logging.info("TCP SYN packet detected, modifying MSS if present.")
-            # Modify MSS option in TCP SYN packets
             tcp.options = [(key, value if key != 'MSS' else min(value, 1300))
                            for key, value in tcp.options]
             del tcp.chksum
@@ -50,7 +60,7 @@ def wrap_in_dns(packet):
 
 def extract_from_dns(packet):
     logging.info("Extracting TCP packet from DNS response.")
-    
+
     try:
         dns_response = DNS(packet)
         tcp_packet = b""
@@ -63,7 +73,12 @@ def extract_from_dns(packet):
                     logging.debug("Ignoring non-TLV or non-matching optcode.")
                     continue
                 tcp_packet = option.optdata
-                logging.info("TCP packet successfully extracted from DNS.")
+                extracted_tcp_packet = IP(tcp_packet)
+                if TCP in extracted_tcp_packet:
+                    log_tcp_packet(extracted_tcp_packet)
+                    logging.info("TCP packet successfully extracted from DNS.")
+                else:
+                    logging.info("Extracted packet is not a TCP packet.")
         return tcp_packet
     except Exception as e:
         logging.error(f"Error while extracting TCP packet from DNS: {e}", exc_info=True)
@@ -72,7 +87,7 @@ def extract_from_dns(packet):
 
 def init_tun():
     logging.info("Initializing TUN interface.")
-    
+
     try:
         TUNSETIFF = 0x400454ca
         IFF_TUN = 0x0001
