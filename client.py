@@ -28,7 +28,7 @@ def receive_dns_responses():
             print(f"Received DNS response from {addr}")
             tcp_packet_data = extract_from_dns(data)
             if tcp_packet_data:
-                os.write(tun, tcp_packet_data)
+                os.write(tun, bytes(tcp_packet_data))
     except KeyboardInterrupt:
         print("Stopping DNS response listener")
 
